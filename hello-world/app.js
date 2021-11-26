@@ -28,7 +28,7 @@ exports.lambdaHandler = async (event, context) => {
                 return await createLanguage(event.body);
     
             case 'GET':
-                return getAllLanguages();
+                return await getAllLanguages();
             default:
                 return unknownMethodResponse(httpMethod);
         }
@@ -42,12 +42,12 @@ exports.lambdaHandler = async (event, context) => {
 
 async function createLanguage(body) {
     const language = JSON.parse(body);
-    await saveLanguageInDB(language);
+    await saveLanguage(language);
     return buildResponse("Language created!");
 }
 
-function getAllLanguages() {
-    return buildResponse("Hola que onda!");
+async function getAllLanguages() {
+    return buildResponse(await readLanguages());
 }
 
 function unknownMethodResponse(method) {
@@ -56,7 +56,11 @@ function unknownMethodResponse(method) {
 
 // CRUD implementation
 
-function saveLanguageInDB(language) {
+async function readLanguages() {
+    return await getAllRecords(process.env.TABLE_NAME);
+}
+
+function saveLanguage(language) {
     const languageDTO = {
         TableName: process.env.TABLE_NAME,
         Item: {
@@ -76,4 +80,22 @@ function buildResponse(body, status=200) {
         'statusCode': status,
         'body': JSON.stringify(body)
     };
+}
+
+async function getAllRecords(tableName) {
+    let allItems = [];
+    let LastEvaluatedKeyFlag = true;
+    let scanParams = {TableName: tableName};
+    while (LastEvaluatedKeyFlag) {
+        let responseData = await ddb.scan(scanParams).promise();
+        let batchItems = responseData.Items;
+        allItems = allItems.concat(batchItems);
+        if (responseData.LastEvaluatedKey) {
+            LastEvaluatedKeyFlag = true;
+            scanParams.ExclusiveStartKey = responseData.LastEvaluatedKey
+        } else {
+            LastEvaluatedKeyFlag = false;
+        }
+    }
+    return allItems;
 }

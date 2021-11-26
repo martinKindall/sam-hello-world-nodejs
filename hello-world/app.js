@@ -1,6 +1,5 @@
 // const axios = require('axios')
 // const url = 'http://checkip.amazonaws.com/';
-let response;
 
 /**
  *
@@ -15,22 +14,38 @@ let response;
  * 
  */
 exports.lambdaHandler = async (event, context) => {
+    const httpMethod = event.httpMethod;
     console.log('Probando logs'); 
     console.log(JSON.stringify(event));
 
-    try {
-        // const ret = await axios(url);
-        response = {
-            'statusCode': 200,
-            'body': JSON.stringify({
-                message: 'Hola mundo :)',
-                // location: ret.data.trim()
-            })
-        }
-    } catch (err) {
-        console.log(err);
-        return err;
-    }
+    switch (httpMethod) {
+        case 'POST':
+            return createLanguage(event);
 
-    return response
+        case 'GET':
+            return getAllLanguages();
+        default:
+            return unknownMethodResponse(httpMethod);
+    }
 };
+
+
+function createLanguage(event) {
+    const language = JSON.parse(event.body);
+    return buildResponse(language);
+}
+
+function getAllLanguages() {
+    return buildResponse("Hola que onda!");
+}
+
+function unknownMethodResponse(method) {
+    return buildResponse(`Method ${method} not allowed`);
+}
+
+function buildResponse(body) {
+    return {
+        'statusCode': 200,
+        'body': JSON.stringify(body)
+    };
+}

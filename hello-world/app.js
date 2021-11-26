@@ -15,12 +15,15 @@ let response;
  * 
  */
 exports.lambdaHandler = async (event, context) => {
+    console.log('Probando logs'); 
+    console.log(JSON.stringify(event));
+
     try {
         // const ret = await axios(url);
         response = {
             'statusCode': 200,
             'body': JSON.stringify({
-                message: 'hello world',
+                message: 'Hola mundo :)',
                 // location: ret.data.trim()
             })
         }

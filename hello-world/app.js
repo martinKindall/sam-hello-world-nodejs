@@ -1,6 +1,10 @@
 // const axios = require('axios')
 // const url = 'http://checkip.amazonaws.com/';
 
+const AWS = require('aws-sdk');
+AWS.config.update({region:  process.env.REGION_NAME});
+const ddb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
+
 /**
  *
  * Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
@@ -18,21 +22,28 @@ exports.lambdaHandler = async (event, context) => {
     console.log('Probando logs'); 
     console.log(JSON.stringify(event));
 
-    switch (httpMethod) {
-        case 'POST':
-            return createLanguage(event);
-
-        case 'GET':
-            return getAllLanguages();
-        default:
-            return unknownMethodResponse(httpMethod);
+    try {
+        switch (httpMethod) {
+            case 'POST':
+                return await createLanguage(event.body);
+    
+            case 'GET':
+                return getAllLanguages();
+            default:
+                return unknownMethodResponse(httpMethod);
+        }
+    } catch (error) {
+        console.error(error);
+        return buildResponse("Server error.", 500)
     }
 };
 
+// Controllers
 
-function createLanguage(event) {
-    const language = JSON.parse(event.body);
-    return buildResponse(language);
+async function createLanguage(body) {
+    const language = JSON.parse(body);
+    await saveLanguageInDB(language);
+    return buildResponse("Language created!");
 }
 
 function getAllLanguages() {
@@ -43,9 +54,26 @@ function unknownMethodResponse(method) {
     return buildResponse(`Method ${method} not allowed`);
 }
 
-function buildResponse(body) {
+// CRUD implementation
+
+function saveLanguageInDB(language) {
+    const languageDTO = {
+        TableName: process.env.TABLE_NAME,
+        Item: {
+            'name' : {S: language.name},
+            'release_date' : {S: language.lanzamiento},
+            'statically_typed': {BOOL: language.tipado_fuerte},
+        }
+    };
+
+    return ddb.putItem(languageDTO).promise();
+}
+
+// Utils
+
+function buildResponse(body, status=200) {
     return {
-        'statusCode': 200,
+        'statusCode': status,
         'body': JSON.stringify(body)
     };
 }

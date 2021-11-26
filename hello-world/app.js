@@ -97,5 +97,7 @@ async function getAllRecords(tableName) {
             LastEvaluatedKeyFlag = false;
         }
     }
-    return allItems;
+    return allItems.map(item => {
+        return AWS.DynamoDB.Converter.unmarshall(item);
+    });
 }
